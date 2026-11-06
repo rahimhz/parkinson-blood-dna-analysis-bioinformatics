@@ -1,18 +1,35 @@
-# GEO downloads and locally generated data
-/data/raw/*
+# GEO downloads and all local dataset-derived files must never be committed.
+# The explicit extensions also protect against files placed elsewhere under data/.
+/data/raw/**
 !/data/raw/.gitkeep
-/data/processed/*
+/data/processed/**
 !/data/processed/.gitkeep
-/results/runs/*
+*.csv.gz
+*.tar
+*.tar.gz
+*.idat
+*.idat.gz
+*.txt.gz
+
+# Generated per-run results and archives are local; keep only the placeholder.
+/results/runs/**
 !/results/runs/.gitkeep
-/logs/*
+
+# Timestamped local logs and checksums; keep only the placeholder.
+/logs/**
 !/logs/.gitkeep
+
+# Temporary downloads and intermediate files
 *.part
 *.tmp
+
+# Python environments, bytecode, and test caches
 .venv/
 __pycache__/
 *.py[cod]
 .pytest_cache/
+
+# Editors and operating systems
 .DS_Store
 .vscode/
 .idea/
