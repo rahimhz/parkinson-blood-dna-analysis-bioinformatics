@@ -4,7 +4,7 @@ A reproducible, validation-first bioinformatics project investigating DNA methyl
 
 **GEO accession:** [GSE165081](https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE165081)
 
-**Research question:** Which DNA methylation sites differ between whole-blood samples from individuals with Parkinson’s disease and control samples?
+**Research question:** Quels sites de méthylation de l’ADN présentent des différences entre les échantillons sanguins de personnes atteintes de la maladie de Parkinson (PD) et ceux des témoins (Control) ?
 
 This project is intended to be exploratory and reproducible. It does not claim causal inference, clinical diagnosis, or treatment relevance from the methylation signal alone.
 
