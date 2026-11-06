@@ -195,16 +195,22 @@ Before activating it, check the repository path and your conda environment. Do n
 
 ## 10. Team task distribution
 
-Replace the placeholder names with the actual team members and real contributions before final submission.
+The project is divided into five complementary responsibilities. Each member is responsible for a specific part of the bioinformatics workflow, including implementation, verification, documentation, and presentation of their contribution.
 
-| Member | Responsibilities | Key files | Expected deliverable |
+| **Member** | **Main responsibility** | **Key files / areas** | **Expected deliverables** |
 |---|---|---|---|
-| `[Person 1 – actual name]` | Coordinate the project, refine the research question, review scientific background and documentation | `README.md`, `SOURCES.md`, `report/` | Reviewed project description and final report draft |
-| `[Person 2 – actual name]` | Review GEO metadata and source files, check sample labels and matching | `data/`, `SOURCES.md`, `DATA_POLICY.md` | Verified local inputs and metadata checks |
-| `[Person 3 – actual name]` | Maintain the shell pipeline, logging, downloads, and file management | `run.sh`, `scripts/run_options.sh`, `cron.example`, `.gitignore` | reproducible execution workflow |
-| `[Person 4 – actual name]` | Review the analysis implementation and statistical design | `scripts/analyze.py`, `results/runs/` | Validated analysis and interpretation |
-| `[Person 5 – actual name]` | Run synthetic tests and assist with reproducibility and presentation | `tests/`, `report/` | Test record and output review |
+| **Person 1** | Dataset acquisition and scientific background: study the GEO record, identify the supplementary files, implement or verify data downloading, document data sources, and explain the biological context of Parkinson's disease and DNA methylation. | `SOURCES.md`, `DATA_POLICY.md`, `data/`, GEO documentation | Verified dataset sources, documented download procedure, checksums, and scientific background |
+| **Person 2** | Data inspection and validation: inspect the downloaded matrix and sample metadata, identify sample and group columns, verify PD/Control labels, check sample matching, and document data-quality issues. | `scripts/analyze.py`, `data/`, validation outputs | Verified metadata structure, sample matching report, and validation results |
+| **Person 3** | Bash automation and pipeline management: implement and maintain download orchestration, command-line options, error handling, logging, file permissions, run directories, and result archiving. | `run.sh`, `scripts/run_options.sh`, `cron.example`, `.gitignore` | Functional and reproducible execution pipeline with logging and automated file management |
+| **Person 4** | Statistical analysis and visualization: implement and review the PD/Control comparison, justify the statistical test based on the verified study design, apply multiple-testing correction, and generate figures and numerical results. | `scripts/analyze.py`, `results/runs/`, statistical methods | Statistical analysis, adjusted p-values, generated figures, and scientific interpretation |
+| **Person 5** | Testing, reproducibility, and final reporting: develop and execute synthetic tests, perform end-to-end pipeline checks, verify generated outputs, organize the final report and presentation, and document reproducibility. | `tests/`, `report/`, `results/runs/`, project documentation | Automated test results, pipeline verification, final scientific report, and presentation materials |
 
+### Shared responsibilities
+
+- Every member must understand the complete workflow and be able to explain the code during the oral defense.
+- Each member must document their contribution and help review another member's work.
+- The team must jointly review the final results, scientific interpretation, and submitted files.
+- Responsibilities may overlap during integration and debugging, but each member remains accountable for their assigned deliverables.
 ## 11. Final academic deliverables
 
 The assignment requires a final scientific report in PDF format of no more than four pages. `report/README.md` describes the intended contents; it is not itself a completed report.
