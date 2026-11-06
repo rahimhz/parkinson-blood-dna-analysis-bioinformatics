@@ -1,141 +1,231 @@
-# Parkinson's Disease DNA Methylation Analysis
+# Parkinson’s Disease DNA Methylation Analysis
 
-Beginner-friendly analysis of the processed DNA methylation M-value matrix for GEO accession **GSE165081**. The project validates the GEO metadata, compares Parkinson's disease (PD) and Control samples when explicitly requested, and writes per-run outputs.
+A reproducible, validation-first bioinformatics project investigating DNA methylation in whole-blood samples from people with Parkinson’s disease (PD) and control individuals.
 
-The analysis does not establish causality, diagnostic performance, or clinical utility.
+**GEO accession:** [GSE165081](https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE165081)
 
-## Data and scope
+**Research question:** Which DNA methylation sites differ between whole-blood samples from individuals with Parkinson’s disease and control samples?
 
-The pipeline downloads the official GEO supplementary files:
+This project is intended to be exploratory and reproducible. It does not claim causal inference, clinical diagnosis, or treatment relevance from the methylation signal alone.
 
-- `GSE165081_M.csv.gz`: processed methylation M-value measurements.
-- `GSE165081_Sample_Sheet.PD-CN.csv.gz`: sample metadata.
+> Current status: the workflow defaults to metadata and input validation. It does not claim that the real GEO dataset has been analyzed, that statistical results are final, or that the final PDF report is complete.
 
-`GSE165081_RAW.tar` contains raw IDAT data. **This project does not download, extract, or process raw IDAT files.** The current workflow starts from processed M-values; raw IDAT preprocessing would require a separate platform-specific workflow.
+## 1. Dataset and scope
 
-No sample counts, headers, sample IDs, group labels, or pair IDs are assumed. The code inspects downloaded files and stops with an error when it cannot identify or validate the actual structure.
+This project uses the publicly available GEO accession **GSE165081** and focuses on the processed methylation matrix rather than raw IDAT data.
 
-## Statistical design
+### Files used
 
-The GEO study description mentions matched controls, but that wording alone does not verify one-to-one pairs.
+| File | Description | Purpose |
+|---|---|---|
+| `GSE165081_M.csv.gz` | Processed methylation M-value matrix | Main analysis input |
+| `GSE165081_Sample_Sheet.PD-CN.csv.gz` | Sample metadata table | Sample IDs, group labels, and matching information |
+| `GSE165081_RAW.tar` | Raw IDAT archive | Not used in this workflow |
 
-- Default `auto`: validates inputs and sample metadata, writes `validation_summary.json`, archives it, and exits successfully without statistical testing or statistical result files.
-- `-p PAIR_COLUMN`: requests a paired t-test only after validating exactly one PD and one Control per pair ID.
-- `-d independent`: explicitly requests an exploratory Welch two-sample t-test, which does not model reported matching. Use only after reviewing the study design.
-- `-p` and `-d independent` conflict and are rejected.
+The workflow downloads the processed GEO supplementary files from the official NCBI GEO FTP site when needed. It does not download, extract, or process the raw IDAT archive; raw-data preprocessing would require a separate platform-specific workflow.
 
-Statistical modes apply Benjamini-Hochberg FDR correction across tested features. The simple tests do not adjust for covariates such as age, sex, or batch.
+The downloaded files are stored locally in `data/raw/` and `data/processed/`. The repository’s `.gitignore` is intended to keep dataset files and local generated data out of Git. Do not force-add GEO files or other large data artefacts.
 
-## Project layout
+## 2. Analysis design
 
-```text
-.
-├── README.md
-├── SOURCES.md
-├── LIEN_GIT.txt
-├── run.sh
-├── cron.example
-├── environment.yml
-├── data/{raw,processed}/
-├── scripts/{analyze.py,run_options.sh}
-├── results/runs/
-├── logs/
-├── report/
-└── tests/
+The pipeline supports a validation-first mode and optional statistical analysis modes.
+
+### Default mode: validation only
+
+Run:
+
+```bash
+./run.sh
 ```
 
-## Five-member team task allocation
+The default execution is intended to:
 
-Replace placeholders with the actual team members and revise tasks to reflect real contributions.
+1. Download or reuse the processed matrix and sample sheet.
+2. Validate gzip integrity and generate local checksums.
+3. Inspect sample metadata and matrix structure.
+4. Verify that sample IDs and group labels are consistent with the matrix.
+5. Write a validation summary and archive the run outputs.
+6. Exit without claiming statistical findings.
 
-| Member | Suggested responsibility |
-|---|---|
-| `[Member 1 name]` | GEO record, data provenance, assignment requirements |
-| `[Member 2 name]` | Inspect and document sample metadata and labels |
-| `[Member 3 name]` | Review matrix structure and sample validation |
-| `[Member 4 name]` | Review statistical design, tests, and interpretation |
-| `[Member 5 name]` | Coordinate reproducibility, figures, and final report |
+The project does not assume sample counts, headers, labels, or pairing information. If the actual file structure is ambiguous or invalid, the pipeline is designed to stop with an error and require the metadata to be resolved before analysis proceeds.
 
-## Ubuntu installation
+### Paired analysis
+
+The GEO study description may mention matched controls, but that wording alone does not guarantee valid one-to-one pairing. A pair-ID column must be verified from the actual metadata before running a paired test.
+
+Run paired analysis only after confirming a true pair identifier:
+
+```bash
+./run.sh -p VERIFIED_PAIR_COLUMN
+```
+
+The paired test should be used only when each pair contains exactly one PD sample and one Control sample, as confirmed by the downloaded sample sheet.
+
+### Independent exploratory analysis
+
+If valid paired information is not confirmed, an exploratory unpaired comparison can be requested explicitly:
+
+```bash
+./run.sh -d independent
+```
+
+This mode is intended for exploratory testing only. It does not model the reported matching in the study design and must be interpreted with that limitation in mind.
+
+### Multiple-testing correction
+
+When statistical mode is enabled, the analysis is intended to apply the Benjamini–Hochberg false-discovery-rate (FDR) adjustment across tested features.
+
+The current statistical workflow does not account for potential confounding variables such as age, sex, or batch effects.
+
+## 3. Command-line options
+
+```text
+-h  Display help and exit.
+-f  Force re-download of the GEO supplementary files.
+-d  Select design mode: auto (default) or independent.
+-s  Specify the sample-ID column when metadata detection is ambiguous.
+-g  Specify the group-label column when detection is ambiguous.
+-p  Specify a verified one-to-one pair-ID column for paired analysis.
+```
+
+`-p` and `-d independent` are mutually exclusive and should not be combined.
+
+## 4. Installation on Ubuntu
+
+Install the required system packages:
 
 ```bash
 sudo apt update
-sudo apt install -y bash wget gzip coreutils tar
+sudo apt install -y git bash wget gzip coreutils tar
 ```
 
-Install Miniconda or Miniforge if needed, then from the repository directory:
+Clone the project and create the conda environment:
 
 ```bash
+git clone https://github.com/rahimhz/parkinson-blood-omics.git
+cd parkinson-blood-omics
+
 conda env create -f environment.yml
 conda activate parkinson-methylation
+
 chmod +x run.sh
 ```
 
-## Offline tests
+The pipeline requires internet access to download the GEO supplementary files when they are not already present locally.
 
-Tests use small synthetic data only and do not download GEO files:
+## 5. Running tests
+
+The repository includes synthetic tests designed to validate analysis logic without downloading the full GEO dataset.
 
 ```bash
 python -m unittest discover -s tests -v
 bash -n run.sh scripts/run_options.sh
 ```
 
-## Run the pipeline
+A passing synthetic test run does not validate the structure of the real GEO files or replace a full pipeline run on the actual dataset.
 
-```bash
-./run.sh -h
+## 6. Repository layout
+
+This describes the current repository structure:
+
+```text
+parkinson-blood-omics/
+├── .gitignore
+├── DATA_POLICY.md
+├── LIEN_GIT.txt
+├── README.md
+├── SOURCES.md
+├── cron.example
+├── environment.yml
+├── data/
+│   ├── raw/.gitkeep
+│   └── processed/.gitkeep
+├── logs/.gitkeep
+├── report/
+│   └── README.md
+├── results/
+│   └── runs/.gitkeep
+├── run.sh
+├── scripts/
+│   ├── __init__.py
+│   ├── analyze.py
+│   └── run_options.sh
+└── tests/
+    ├── __init__.py
+    ├── test_analysis.py
+    └── test_run_options.py
 ```
 
-Default validation-only run:
+The `.gitkeep` files are placeholders. Data downloaded from GEO, cleaned metadata, logs, and per-run analysis outputs are created locally and are intended to remain outside Git.
 
-```bash
-./run.sh
+## 7. Generated outputs
+
+Each execution creates a unique directory under:
+
+```text
+results/runs/RUN_ID/
 ```
 
-The default run validates gzip integrity, checksums, metadata labels and sample matching, inspects matrix orientation, creates `validation_summary.json`, archives the validation output, and exits without statistical testing.
+In validation mode, expected outputs include:
 
-Paired analysis requires verification of a genuine pair-ID column first:
+- `validation_summary.json`: validation status and detected metadata/matrix information.
+- `results_RUN_ID.tar.gz`: archive of the run outputs.
 
-```bash
-./run.sh -p VERIFIED_PAIR_COLUMN
-```
+In statistical modes, additional outputs may include:
 
-Explicit exploratory independent comparison:
+- `differential_methylation.csv`: per-feature statistical results and adjusted p-values.
+- `analysis_summary.json`: summary of the statistical design and findings.
+- `figures/methylation_volcano.png`: volcano plot for methylation effect versus significance.
 
-```bash
-./run.sh -d independent
-```
+Execution logs and checksum manifests are stored under `logs/`. These are local run artefacts and should not be published to GitHub.
 
-If automatic metadata-column detection is ambiguous, inspect the logged sample-sheet preview and supply actual headers:
+## 8. Data protection
 
-```bash
-./run.sh -d independent -s ACTUAL_SAMPLE_ID_HEADER -g ACTUAL_GROUP_HEADER
-```
+The project is intended to download the required GEO files automatically when `./run.sh` is executed on Ubuntu. The downloaded files are local-only and should not be added to the repository.
 
-Options: `-h` help, `-f` force re-download, `-d auto|independent`, `-s` sample-ID column, `-g` group column, and `-p` verified pair-ID column. A valid `-p` resolves `auto` to `paired`.
+This is enforced through `.gitignore` and documented in `DATA_POLICY.md`.
 
-Existing valid downloads are reused. `-f` forces a fresh download. Each invocation gets its own unique results directory and archive.
+Do not run `git add -f` on GEO data or other large dataset files.
 
-## Outputs
+## 9. Cron scheduling
 
-Files are stored under `results/runs/RUN_ID/` and are excluded from Git.
+`cron.example` is a disabled validation-only template. It does not perform statistical testing and should only be enabled after verifying the local path, Python environment, and intended execution mode.
 
-- `validation_summary.json`: generated in auto mode; contains detected structure, validated sample IDs/counts, and validation status.
-- `differential_methylation.csv`, `analysis_summary.json`, `figures/methylation_volcano.png`: generated only for statistical modes.
-- `results_RUN_ID.tar.gz`: archive of regular output files from this run only.
-- `logs/run_RUN_ID.log`: timestamped log.
-- `logs/SHA256SUMS_RUN_ID.txt`: checksums of the downloaded compressed files.
+Before activating it, check the repository path and your conda environment. Do not schedule a statistical comparison until the actual metadata and design have been reviewed.
 
-A local checksum manifest verifies file consistency against the digest generated during the same run. It is not independent proof of authenticity without a trusted provider digest.
+## 10. Team task distribution
 
-## Cron scheduling
+Replace the placeholder names with the actual team members and real contributions before final submission.
 
-`cron.example` is disabled and validation-only. It does not choose a statistical test. To schedule it, replace the path, uncomment the line, and install it with `crontab -e`. Check with `crontab -l`; remove the line with `crontab -e` to disable. Ensure cron uses the intended Python environment.
+| Member | Responsibilities | Key files | Expected deliverable |
+|---|---|---|---|
+| `[Person 1 – actual name]` | Coordinate the project, refine the research question, review scientific background and documentation | `README.md`, `SOURCES.md`, `report/` | Reviewed project description and final report draft |
+| `[Person 2 – actual name]` | Review GEO metadata and source files, check sample labels and matching | `data/`, `SOURCES.md`, `DATA_POLICY.md` | Verified local inputs and metadata checks |
+| `[Person 3 – actual name]` | Maintain the shell pipeline, logging, downloads, and file management | `run.sh`, `scripts/run_options.sh`, `cron.example`, `.gitignore` | reproducible execution workflow |
+| `[Person 4 – actual name]` | Review the analysis implementation and statistical design | `scripts/analyze.py`, `results/runs/` | Validated analysis and interpretation |
+| `[Person 5 – actual name]` | Run synthetic tests and assist with reproducibility and presentation | `tests/`, `report/` | Test record and output review |
 
-## Report deliverable
+## 11. Final academic deliverables
 
-The assignment requires a `report.pdf` of no more than four pages. It is a future deliverable and is not included or claimed complete. See `report/README.md`. Do not invent results or a commit hash.
+The assignment requires a final scientific report in PDF format of no more than four pages. `report/README.md` describes the intended contents; it is not itself a completed report.
 
-## Limitations
+Do not claim completion of the final PDF report, ZIP archive, or final commit hash until each has been generated and checked.
 
-The workflow analyzes submitted processed M-values and does not process raw IDAT. Statistical tests do not model covariates; independent testing does not account for matching. No real data results are asserted by this starter project.
+The final submission may additionally require a ZIP archive containing the appropriate project files while excluding the original GEO dataset and other large local data files.
+
+`LIEN_GIT.txt` is intended to hold the repository URL and the final commit hash. Fill in the commit hash only after the final commit actually exists.
+
+## 12. Limitations
+
+- The workflow operates on processed M-values and does not process raw IDAT data.
+- Actual GEO headers, sample IDs, group labels, and pair information must be confirmed from the downloaded metadata.
+- A paired test is appropriate only when the metadata and study design verify one-to-one pairs.
+- An independent Welch test does not model the matching implied by the study description.
+- The current statistical framework does not account for age, sex, batch, or other confounding variables.
+- Results are exploratory associations and should not be interpreted as causal findings or clinical diagnostic claims.
+
+## 13. Sources
+
+- [GSE165081 – NCBI GEO](https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE165081)
+- [Official GEO supplementary directory](https://ftp.ncbi.nlm.nih.gov/geo/series/GSE165nnn/GSE165081/suppl/)
+
