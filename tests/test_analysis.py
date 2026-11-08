@@ -103,8 +103,9 @@ class AnalysisTests(unittest.TestCase):
         pd_flag = (samples['_group'] == 'PD').to_numpy(float)
         sex_flag = (samples['Sex'] == 'M').to_numpy(float)
         base = 0.15 * (age - age.mean()) + 0.4 * sex_flag
-        values = pd_flag * 1.8 + base
-        matrix = pd.DataFrame([values, values * 0.5 + np.array([0.1, -0.1] * 4)],
+        noise = np.array([0.12, -0.08, 0.04, -0.03, -0.05, 0.09, -0.11, 0.02])
+        values = pd_flag * 1.8 + base + noise
+        matrix = pd.DataFrame([values, values * 0.5 + np.array([0.1, -0.1, 0.0, 0.05, -0.04, 0.08, -0.02, 0.03])],
                               index=['cg_effect', 'cg_second'],
                               columns=samples['sample'])
         results, name, summary = calculate_adjusted_results(matrix, samples, 'sample')
