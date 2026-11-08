@@ -142,10 +142,9 @@ clean_sample_sheet() {
   local source="data/raw/${SHEET_FILE}"
   local destination="data/processed/sample_sheet_clean.csv"
   local temporary="${destination}.tmp"
-  log 'Removing blank physical lines and normalizing CRLF line endings.'
-  # This is appropriate only for one CSV record per physical line; it is not a
-  # general CSV parser or field rewriter.
-  gzip -dc "$source" | tr -d '\r' | awk 'NF > 0 { print }' > "$temporary"
+  log 'Decompressing the sample sheet without rewriting CSV records.'
+  # Preserve quoted fields and embedded newlines; pandas handles CRLF and blank rows.
+  gzip -dc "$source" > "$temporary"
   [[ -s "$temporary" ]] || fail 'Cleaned sample sheet is empty.'
   mv -- "$temporary" "$destination"
   grep -q '[^[:space:]]' "$destination" || fail 'Sample sheet has no non-empty content.'

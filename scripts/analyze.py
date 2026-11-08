@@ -162,6 +162,34 @@ def load_matrix(matrix_path, orientation, sample_ids):
     return matrix.loc[:, list(map(str, sample_ids))]
 
 
+def validate_numeric_matrix(matrix_path, chunksize=2000):
+    """Check that the matrix contains numeric measurements without loading it all at once."""
+    has_finite_value = False
+    reader = pd.read_csv(
+        matrix_path, compression='infer', index_col=0,
+        low_memory=False, chunksize=chunksize
+    )
+    for chunk in reader:
+        numeric = chunk.apply(pd.to_numeric, errors='coerce')
+        if np.isfinite(numeric.to_numpy(dtype=float)).any():
+            has_finite_value = True
+            break
+    if not has_finite_value:
+        raise ValueError('Matrix contains no finite numeric M-value measurements.')
+
+
+def finite_row_mean(values):
+    """Calculate row means without warnings for rows containing only missing values."""
+    finite = np.isfinite(values)
+    counts = finite.sum(axis=1)
+    totals = np.where(finite, values, 0.0).sum(axis=1)
+    return np.divide(
+        totals, counts,
+        out=np.full(values.shape[0], np.nan, dtype=float),
+        where=counts > 0
+    )
+
+
 def validate_pairs(labeled, sample_column, pair_column):
     if pair_column not in labeled.columns:
         raise ValueError(f'Pair-ID column {pair_column!r} not found.')
@@ -199,8 +227,8 @@ def calculate_results(matrix, labeled, sample_column, design, pair_column=None):
         n = valid.sum(axis=1)
         pd_safe = np.where(valid, pd_array, np.nan)
         control_safe = np.where(valid, control_array, np.nan)
-        pd_mean = np.nanmean(pd_safe, axis=1)
-        control_mean = np.nanmean(control_safe, axis=1)
+        pd_mean = finite_row_mean(pd_safe)
+        control_mean = finite_row_mean(control_safe)
         test = ttest_rel(pd_safe, control_safe, axis=1, nan_policy='omit')
         n_pd = n_control = n
         test_name = 'paired t-test'
@@ -211,8 +239,8 @@ def calculate_results(matrix, labeled, sample_column, design, pair_column=None):
         control_array = matrix[control_ids].apply(pd.to_numeric, errors='coerce').to_numpy(float)
         n_pd = np.isfinite(pd_array).sum(axis=1)
         n_control = np.isfinite(control_array).sum(axis=1)
-        pd_mean = np.nanmean(pd_array, axis=1)
-        control_mean = np.nanmean(control_array, axis=1)
+        pd_mean = finite_row_mean(pd_array)
+        control_mean = finite_row_mean(control_array)
         test = ttest_ind(pd_array, control_array, axis=1, equal_var=False, nan_policy='omit')
         test_name = 'Welch two-sample t-test (unpaired; matching not modeled)'
     else:
@@ -270,11 +298,16 @@ def run_analysis(args):
     ids = labeled[sample_column].astype(str).str.strip().tolist()
     orientation, axis_ids, _ = detect_matrix_orientation(args.matrix, ids)
     counts, extras = validate_sample_matches(labeled, sample_column, axis_ids)
-    # Load and verify numeric matrix even in validation-only auto mode.
-    matrix = load_matrix(args.matrix, orientation, ids)
-    numeric = matrix.apply(pd.to_numeric, errors='coerce')
-    if numeric.empty or not np.isfinite(numeric.to_numpy(dtype=float)).any():
-        raise ValueError('Matrix contains no finite numeric M-value measurements.')
+    # Validation-only mode scans the matrix in chunks to avoid a second full-size
+    # in-memory copy. Statistical modes load the selected samples for testing.
+    if args.design == 'auto':
+        validate_numeric_matrix(args.matrix)
+        matrix = None
+    else:
+        matrix = load_matrix(args.matrix, orientation, ids)
+        numeric = matrix.apply(pd.to_numeric, errors='coerce')
+        if numeric.empty or not np.isfinite(numeric.to_numpy(dtype=float)).any():
+            raise ValueError('Matrix contains no finite numeric M-value measurements.')
 
     validation = {
         'accession': 'GSE165081',

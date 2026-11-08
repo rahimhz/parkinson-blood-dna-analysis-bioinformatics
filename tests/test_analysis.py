@@ -2,10 +2,12 @@
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 import pandas as pd
 from scripts.analyze import (
     calculate_results, detect_group_column, detect_matrix_orientation,
     find_sample_column, labeled_metadata, load_matrix, run_analysis,
+    validate_numeric_matrix,
     validate_pairs, validate_sample_matches,
 )
 
@@ -88,7 +90,9 @@ class AnalysisTests(unittest.TestCase):
             args = Namespace(matrix=matrix_path, samples=sheet_path,
                              output_dir=str(out), sample_column=None,
                              group_column=None, design='auto', pair_column=None)
-            run_analysis(args)
+            with patch('scripts.analyze.load_matrix', side_effect=AssertionError(
+                    'Validation-only mode should not load the full matrix')):
+                run_analysis(args)
             self.assertTrue((out / 'validation_summary.json').is_file())
             self.assertFalse((out / 'differential_methylation.csv').exists())
             self.assertFalse((out / 'analysis_summary.json').exists())
