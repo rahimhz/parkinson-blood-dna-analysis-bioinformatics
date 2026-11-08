@@ -8,7 +8,7 @@ A reproducible, validation-first bioinformatics project investigating DNA methyl
 
 This project is intended to be exploratory and reproducible. It does not claim causal inference, clinical diagnosis, or treatment relevance from the methylation signal alone.
 
-> Current status: the workflow defaults to metadata and input validation. It does not claim that the real GEO dataset has been analyzed, that statistical results are final, or that the final PDF report is complete.
+> Current status (8 November 2026): the real GEO inputs were validated and an exploratory OLS analysis was run on 28 samples (14 PD, 14 Control). The model adjusted for age and sex and tested 485,430 complete CpG features. No feature passed Benjamini–Hochberg FDR at q < 0.05. This is an exploratory result, not a clinical or causal finding. The final four-page PDF report still needs team review.
 
 ## 1. Dataset and scope
 
@@ -25,6 +25,18 @@ This project uses the publicly available GEO accession **GSE165081** and focuses
 The workflow downloads the processed GEO supplementary files from the official NCBI GEO FTP site when needed. It does not download, extract, or process the raw IDAT archive; raw-data preprocessing would require a separate platform-specific workflow.
 
 The downloaded files are stored locally in `data/raw/` and `data/processed/`. The repository’s `.gitignore` is intended to keep dataset files and local generated data out of Git. Do not force-add GEO files or other large data artefacts.
+
+## 2.1 Current exploratory result (8 November 2026)
+
+The deposited processed M-value matrix was validated against the sample sheet. The analysis included 28 samples (14 PD and 14 Control) and 485,430 CpG features with complete finite values across all samples. The vectorized OLS model was:
+
+`M-value ~ PD status + age + sex`
+
+No CpG feature passed Benjamini–Hochberg FDR correction at q < 0.05. The smallest nominal p-value was approximately 6.46 × 10⁻⁶, but its adjusted q-value was approximately 0.999998. Therefore, the nominally small p-values must not be described as statistically significant after multiple-testing correction.
+
+The sample sheet shows mean age 72.19 years (SD 5.91) in PD and 68.17 years (SD 3.76) in controls. There were 9 male and 5 female PD samples, versus 6 male and 8 female controls. These imbalances support including age and sex in the exploratory model.
+
+The model did not include blood-cell composition or additional technical covariates. The deposited processed matrix was analyzed as supplied; raw IDAT preprocessing was not repeated. These results do not reproduce the full published analysis and should be interpreted cautiously.
 
 ## 2. Analysis design
 
