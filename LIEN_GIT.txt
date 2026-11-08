@@ -1,2 +1,2 @@
 Repository: https://github.com/rahimhz/parkinson-blood-dna-analysis-bioinformatics
-Final commit hash: 6a8bbae676fc0574fd3df3553b1d96fa88b01057
+Analysis milestone commit: eed6598da8c2431d1ad02b5c9739e8e9a5e271e1
