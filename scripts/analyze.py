@@ -165,15 +165,15 @@ def load_matrix(matrix_path, orientation, sample_ids):
 def validate_numeric_matrix(matrix_path, chunksize=2000):
     """Check that the matrix contains numeric measurements without loading it all at once."""
     has_finite_value = False
-    reader = pd.read_csv(
+    with pd.read_csv(
         matrix_path, compression='infer', index_col=0,
         low_memory=False, chunksize=chunksize
-    )
-    for chunk in reader:
-        numeric = chunk.apply(pd.to_numeric, errors='coerce')
-        if np.isfinite(numeric.to_numpy(dtype=float)).any():
-            has_finite_value = True
-            break
+    ) as reader:
+        for chunk in reader:
+            numeric = chunk.apply(pd.to_numeric, errors='coerce')
+            if np.isfinite(numeric.to_numpy(dtype=float)).any():
+                has_finite_value = True
+                break
     if not has_finite_value:
         raise ValueError('Matrix contains no finite numeric M-value measurements.')
 
@@ -266,7 +266,9 @@ def calculate_results(matrix, labeled, sample_column, design, pair_column=None):
 
 
 def write_json(path, payload):
-    Path(path).write_text(json.dumps(payload, indent=2) + '\n', encoding='utf-8')
+    output = Path(path)
+    output.parent.mkdir(parents=True, exist_ok=True)
+    output.write_text(json.dumps(payload, indent=2) + '\n', encoding='utf-8')
 
 
 def write_statistical_outputs(results, summary, output_dir):
