@@ -4,8 +4,9 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 import pandas as pd
+import numpy as np
 from scripts.analyze import (
-    calculate_results, detect_group_column, detect_matrix_orientation,
+    calculate_adjusted_results, calculate_results, detect_group_column, detect_matrix_orientation,
     find_sample_column, labeled_metadata, load_matrix, run_analysis,
     validate_numeric_matrix,
     validate_pairs, validate_sample_matches,
@@ -90,6 +91,38 @@ class AnalysisTests(unittest.TestCase):
                 'feature,S1,S2\ncgA,missing,unknown\ncgB,none,NA\n')
             with self.assertRaisesRegex(ValueError, 'no finite numeric'):
                 validate_numeric_matrix(path, chunksize=1)
+
+    def test_age_sex_adjusted_ols(self):
+        samples = pd.DataFrame({
+            'sample': [f'S{i}' for i in range(8)],
+            '_group': ['PD', 'PD', 'PD', 'PD', 'Control', 'Control', 'Control', 'Control'],
+            'Age': [60, 62, 64, 66, 61, 63, 65, 67],
+            'Sex': ['M', 'F', 'M', 'F', 'M', 'F', 'M', 'F'],
+        })
+        age = samples['Age'].to_numpy(float)
+        pd_flag = (samples['_group'] == 'PD').to_numpy(float)
+        sex_flag = (samples['Sex'] == 'M').to_numpy(float)
+        base = 0.15 * (age - age.mean()) + 0.4 * sex_flag
+        noise = np.array([0.12, -0.08, 0.04, -0.03, -0.05, 0.09, -0.11, 0.02])
+        values = pd_flag * 1.8 + base + noise
+        matrix = pd.DataFrame([values, values * 0.5 + np.array([0.1, -0.1, 0.0, 0.05, -0.04, 0.08, -0.02, 0.03])],
+                              index=['cg_effect', 'cg_second'],
+                              columns=samples['sample'])
+        results, name, summary = calculate_adjusted_results(matrix, samples, 'sample')
+        self.assertIn('adjusted for age and sex', name)
+        self.assertEqual(summary['n_samples'], 8)
+        self.assertEqual(summary['features_tested_complete_cases'], 2)
+        self.assertIn('adjusted_PD_coefficient', results.columns)
+        self.assertTrue(results['q_value_BH'].between(0, 1).all())
+
+    def test_adjusted_ols_requires_age_and_sex(self):
+        samples = pd.DataFrame({
+            'sample': ['P1', 'P2', 'C1', 'C2'],
+            '_group': ['PD', 'PD', 'Control', 'Control'],
+        })
+        matrix = pd.DataFrame([[1.0, 2.0, 1.5, 1.7]], columns=samples['sample'])
+        with self.assertRaisesRegex(ValueError, 'requires metadata columns'):
+            calculate_adjusted_results(matrix, samples, 'sample')
 
     def test_auto_validation_does_not_create_statistical_outputs(self):
         with tempfile.TemporaryDirectory() as directory:

@@ -8,7 +8,7 @@ A reproducible, validation-first bioinformatics project investigating DNA methyl
 
 This project is intended to be exploratory and reproducible. It does not claim causal inference, clinical diagnosis, or treatment relevance from the methylation signal alone.
 
-> Current status: the workflow defaults to metadata and input validation. It does not claim that the real GEO dataset has been analyzed, that statistical results are final, or that the final PDF report is complete.
+> Current status (8 November 2026): the real GEO inputs were validated and an exploratory OLS analysis was run on 28 samples (14 PD, 14 Control). The model adjusted for age and sex and tested 485,430 complete CpG features. No feature passed Benjamini–Hochberg FDR at q < 0.05. This is an exploratory result, not a clinical or causal finding. The final four-page PDF report still needs team review.
 
 ## 1. Dataset and scope
 
@@ -25,6 +25,18 @@ This project uses the publicly available GEO accession **GSE165081** and focuses
 The workflow downloads the processed GEO supplementary files from the official NCBI GEO FTP site when needed. It does not download, extract, or process the raw IDAT archive; raw-data preprocessing would require a separate platform-specific workflow.
 
 The downloaded files are stored locally in `data/raw/` and `data/processed/`. The repository’s `.gitignore` is intended to keep dataset files and local generated data out of Git. Do not force-add GEO files or other large data artefacts.
+
+## 2.1 Current exploratory result (8 November 2026)
+
+The deposited processed M-value matrix was validated against the sample sheet. The analysis included 28 samples (14 PD and 14 Control) and 485,430 CpG features with complete finite values across all samples. The vectorized OLS model was:
+
+`M-value ~ PD status + age + sex`
+
+No CpG feature passed Benjamini–Hochberg FDR correction at q < 0.05. The smallest nominal p-value was approximately 6.46 × 10⁻⁶, but its adjusted q-value was approximately 0.999998. Therefore, the nominally small p-values must not be described as statistically significant after multiple-testing correction.
+
+The sample sheet shows mean age 72.19 years (SD 5.91) in PD and 68.17 years (SD 3.76) in controls. There were 9 male and 5 female PD samples, versus 6 male and 8 female controls. These imbalances support including age and sex in the exploratory model.
+
+The model did not include blood-cell composition or additional technical covariates. The deposited processed matrix was analyzed as supplied; raw IDAT preprocessing was not repeated. These results do not reproduce the full published analysis and should be interpreted cautiously.
 
 ## 2. Analysis design
 
@@ -60,6 +72,20 @@ Run paired analysis only after confirming a true pair identifier:
 ```
 
 The paired test should be used only when each pair contains exactly one PD sample and one Control sample, as confirmed by the downloaded sample sheet.
+
+### Age- and sex-adjusted exploratory analysis
+
+The sample sheet contains age and sex for all validated samples. The project therefore supports a more informative exploratory model:
+
+```bash
+./run.sh -d adjusted
+```
+
+This fits one ordinary least-squares model per methylation feature in a vectorized calculation:
+
+`M-value ~ PD status + age + sex`
+
+The reported PD coefficient estimates the PD-Control difference conditional on age and sex. Benjamini-Hochberg FDR correction is applied across tested features. Features with any missing/non-finite value across the 28 samples are excluded from this complete-case model and counted in the summary. This small-sample observational analysis remains exploratory; it does not control batch effects, prove causality, or establish diagnostic value. It is not a paired test.
 
 ### Independent exploratory analysis
 
@@ -227,7 +253,7 @@ The final submission may additionally require a ZIP archive containing the appro
 - Actual GEO headers, sample IDs, group labels, and pair information must be confirmed from the downloaded metadata.
 - A paired test is appropriate only when the metadata and study design verify one-to-one pairs.
 - An independent Welch test does not model the matching implied by the study description.
-- The current statistical framework does not account for age, sex, batch, or other confounding variables.
+- Only the adjusted OLS mode accounts for age and sex; batch effects and other confounders are not modeled.
 - Results are exploratory associations and should not be interpreted as causal findings or clinical diagnostic claims.
 
 ## 13. Sources

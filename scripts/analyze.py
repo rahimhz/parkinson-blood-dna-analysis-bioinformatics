@@ -265,6 +265,98 @@ def calculate_results(matrix, labeled, sample_column, design, pair_column=None):
     return result.sort_values('p_value'), test_name
 
 
+def calculate_adjusted_results(matrix, labeled, sample_column):
+    """Fit vectorized per-feature OLS: M-value ~ PD status + age + sex."""
+    required = {'Age', 'Sex'}
+    missing_columns = required - set(labeled.columns)
+    if missing_columns:
+        raise ValueError(f'Adjusted analysis requires metadata columns: {sorted(missing_columns)}')
+
+    age = pd.to_numeric(labeled['Age'], errors='coerce').to_numpy(float)
+    if not np.isfinite(age).all():
+        raise ValueError('Age contains missing or non-numeric values; adjusted analysis cannot proceed.')
+
+    sex_text = labeled['Sex'].astype(str).str.strip().str.lower()
+    sex_map = {'m': 1.0, 'male': 1.0, 'f': 0.0, 'female': 0.0}
+    sex = sex_text.map(sex_map)
+    if sex.isna().any() or sex.nunique() != 2:
+        raise ValueError('Sex must contain both recognized categories (M/F or Male/Female) with no missing values.')
+
+    group = (labeled['_group'] == 'PD').to_numpy(dtype=float)
+    n = len(labeled)
+    design_matrix = np.column_stack([
+        np.ones(n),
+        group,
+        age - age.mean(),
+        sex.to_numpy(dtype=float),
+    ])
+    rank = int(np.linalg.matrix_rank(design_matrix))
+    if rank != design_matrix.shape[1]:
+        raise ValueError('Adjusted model is rank-deficient: PD status, age, and sex cannot be separated in this sample.')
+
+    residual_df = n - rank
+    if residual_df <= 0:
+        raise ValueError('Adjusted model has no residual degrees of freedom.')
+
+    values = matrix.apply(pd.to_numeric, errors='coerce').to_numpy(dtype=float)
+    complete = np.isfinite(values).all(axis=1)
+    if not complete.any():
+        raise ValueError('No methylation features have complete values across all samples for adjusted OLS.')
+    y = values[complete].T
+    coefficients = np.linalg.lstsq(design_matrix, y, rcond=None)[0]
+    residuals = y - design_matrix @ coefficients
+    residual_variance = np.sum(residuals ** 2, axis=0) / residual_df
+    covariance_base = np.linalg.inv(design_matrix.T @ design_matrix)
+    standard_error = np.sqrt(np.maximum(residual_variance * covariance_base[1, 1], 0.0))
+    effect = coefficients[1]
+    statistic = np.divide(
+        effect, standard_error,
+        out=np.full_like(effect, np.nan),
+        where=standard_error > 0
+    )
+    from scipy.stats import t as student_t
+    pvalue = 2.0 * student_t.sf(np.abs(statistic), df=residual_df)
+    valid = np.isfinite(pvalue) & np.isfinite(effect)
+    if not valid.any():
+        raise ValueError('Adjusted OLS produced no valid feature-level p-values.')
+
+    pd_ids = labeled.loc[labeled['_group'] == 'PD', sample_column].tolist()
+    control_ids = labeled.loc[labeled['_group'] == 'Control', sample_column].tolist()
+    pd_values = values[:, [matrix.columns.get_loc(sample) for sample in pd_ids]]
+    control_values = values[:, [matrix.columns.get_loc(sample) for sample in control_ids]]
+    mean_pd = finite_row_mean(pd_values)
+    mean_control = finite_row_mean(control_values)
+    feature_ids = matrix.index.astype(str).to_numpy()[complete][valid]
+    result = pd.DataFrame({
+        'feature_id': feature_ids,
+        'n_PD': len(pd_ids),
+        'n_Control': len(control_ids),
+        'mean_PD': mean_pd[complete][valid],
+        'mean_Control': mean_control[complete][valid],
+        'mean_difference_PD_minus_Control': mean_pd[complete][valid] - mean_control[complete][valid],
+        'adjusted_PD_coefficient': effect[valid],
+        'test_statistic': statistic[valid],
+        'p_value': pvalue[valid],
+    })
+    result['q_value_BH'] = multipletests(result['p_value'].to_numpy(), method='fdr_bh')[1]
+    summary = {
+        'model': 'M-value ~ PD_status + age + sex',
+        'n_samples': n,
+        'n_PD': int(group.sum()),
+        'n_Control': int(n - group.sum()),
+        'age_mean': float(age.mean()),
+        'age_sd': float(age.std(ddof=1)),
+        'sex_counts': {str(k): int(v) for k, v in sex_text.value_counts().to_dict().items()},
+        'features_in_matrix': int(len(values)),
+        'features_tested_complete_cases': int(complete.sum()),
+        'features_excluded_for_missing_or_nonfinite_values': int((~complete).sum()),
+        'residual_degrees_of_freedom': int(residual_df),
+        'model_rank': rank,
+        'interpretation': 'Adjusted PD coefficient is the estimated PD-Control difference in M-values conditional on age and sex.',
+    }
+    return result.sort_values('p_value'), 'OLS t-test for PD coefficient adjusted for age and sex', summary
+
+
 def write_json(path, payload):
     output = Path(path)
     output.parent.mkdir(parents=True, exist_ok=True)
@@ -334,15 +426,20 @@ def run_analysis(args):
         print('Validation completed successfully. No statistical tests were run.')
         return
 
-    results, test_name = calculate_results(matrix, labeled, sample_column, args.design, args.pair_column)
+    if args.design == 'adjusted':
+        results, test_name, model_summary = calculate_adjusted_results(matrix, labeled, sample_column)
+    else:
+        results, test_name = calculate_results(matrix, labeled, sample_column, args.design, args.pair_column)
+        model_summary = {}
     validation.update({
         'design': args.design,
         'pair_column': args.pair_column,
+        'model_summary': model_summary,
         'statistical_test': test_name,
         'multiple_testing_correction': 'Benjamini-Hochberg FDR',
         'features_tested': int(len(results)),
         'limitations': [
-            'No covariates are modeled.',
+            'Adjusted mode includes age and sex; independent and paired t-test modes do not model covariates.',
             'Associations do not establish causality or diagnostic performance.',
             'Processed M-values are analyzed; raw IDAT files are not processed.',
         ],
@@ -357,7 +454,7 @@ def build_parser():
     parser.add_argument('--output-dir', required=True)
     parser.add_argument('--sample-column')
     parser.add_argument('--group-column')
-    parser.add_argument('--design', choices=['auto', 'paired', 'independent'], default='auto')
+    parser.add_argument('--design', choices=['auto', 'paired', 'independent', 'adjusted'], default='auto')
     parser.add_argument('--pair-column')
     return parser
 
@@ -367,8 +464,8 @@ def main():
     if args.design == 'paired' and not args.pair_column:
         print('ERROR: paired design requires --pair-column.', file=sys.stderr)
         return 2
-    if args.design == 'independent' and args.pair_column:
-        print('ERROR: --pair-column cannot be used with independent design.', file=sys.stderr)
+    if args.design in {'independent', 'adjusted'} and args.pair_column:
+        print('ERROR: --pair-column cannot be combined with independent or adjusted design.', file=sys.stderr)
         return 2
     try:
         run_analysis(args)

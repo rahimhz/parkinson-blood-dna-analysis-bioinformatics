@@ -22,4 +22,9 @@ The GEO description mentions matched controls. This does not establish that the 
 
 ## Citation
 
-Use the citation and linked publication on the GEO record for the academic report. Bibliographic details should be verified from GEO; none are invented here.
+Henderson AR, Wang Q, Meechoovet B, et al. **DNA Methylation and Expression Profiles of Whole Blood in Parkinson's Disease.** *Frontiers in Genetics*. 2021;12:640266. doi:10.3389/fgene.2021.640266. PMID: 33981329.
+
+- [PubMed record](https://pubmed.ncbi.nlm.nih.gov/33981329/)
+- [GEO accession GSE165081](https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE165081)
+
+The publication describes a cohort design of 15 age-matched subjects per group, while the GSE165081 methylation subseries and its downloaded sample sheet contain 28 samples: 14 PD and 14 Control. This project reports the validated subseries sample count, not the broader study design count.

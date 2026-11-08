@@ -4,12 +4,12 @@ resolve_design() {
   local requested_design="$1"
   local pair_column="$2"
   case "$requested_design" in
-    auto|independent) ;;
-    *) echo 'ERROR: design must be auto or independent; use -p for paired.' >&2; return 2 ;;
+    auto|independent|adjusted) ;;
+    *) echo 'ERROR: design must be auto, independent, or adjusted; use -p for paired.' >&2; return 2 ;;
   esac
   if [[ -n "$pair_column" ]]; then
-    if [[ "$requested_design" == 'independent' ]]; then
-      echo 'ERROR: -p and -d independent cannot be combined.' >&2
+    if [[ "$requested_design" != 'auto' ]]; then
+      echo 'ERROR: -p cannot be combined with an explicit non-auto design.' >&2
       return 2
     fi
     printf '%s\n' 'paired'
