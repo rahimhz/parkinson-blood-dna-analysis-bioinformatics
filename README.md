@@ -102,8 +102,8 @@ sudo apt install -y git bash wget gzip coreutils tar
 Clone the project and create the conda environment:
 
 ```bash
-git clone https://github.com/rahimhz/parkinson-blood-omics.git
-cd parkinson-blood-omics
+git clone https://github.com/rahimhz/parkinson-blood-dna-analysis-bioinformatics.git
+cd parkinson-blood-dna-analysis-bioinformatics
 
 conda env create -f environment.yml
 conda activate parkinson-methylation
@@ -129,7 +129,7 @@ A passing synthetic test run does not validate the structure of the real GEO fil
 This describes the current repository structure:
 
 ```text
-parkinson-blood-omics/
+parkinson-blood-dna-analysis-bioinformatics/
 ├── .gitignore
 ├── DATA_POLICY.md
 ├── LIEN_GIT.txt

@@ -1,3 +1,3 @@
 # Disabled, validation-only example. It does not select a statistical test.
 # Replace path and uncomment after confirming the environment and permissions.
-# 15 2 * * * cd /ABSOLUTE/PATH/parkinson-blood-omics && /bin/bash run.sh >> logs/cron.log 2>&1
+# 15 2 * * * cd /ABSOLUTE/PATH/parkinson-blood-dna-analysis-bioinformatics && /bin/bash run.sh >> logs/cron.log 2>&1
