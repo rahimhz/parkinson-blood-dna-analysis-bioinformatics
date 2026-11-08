@@ -27,14 +27,15 @@ usage() {
 Usage: ./run.sh [options]
   -h            Show help and exit.
   -f            Force re-download the two supplementary GEO files.
-  -d DESIGN     Design: auto (default) or independent.
+  -d DESIGN     Design: auto (default), independent, or adjusted.
   -s COLUMN     Actual sample-ID header if detection is ambiguous.
   -g COLUMN     Actual group header if detection is ambiguous.
   -p COLUMN     Verified one-to-one pair-ID header; selects paired analysis.
 
 Auto mode validates inputs, writes a validation summary and archive, then
 exits successfully without statistical testing. -p requires verified pairs.
--d independent explicitly requests an exploratory unpaired comparison.
+-d independent requests an exploratory unadjusted Welch test.
+-d adjusted requests OLS with PD status, age, and sex covariates.
 USAGE
 }
 

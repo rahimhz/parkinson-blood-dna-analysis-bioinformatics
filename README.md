@@ -61,6 +61,20 @@ Run paired analysis only after confirming a true pair identifier:
 
 The paired test should be used only when each pair contains exactly one PD sample and one Control sample, as confirmed by the downloaded sample sheet.
 
+### Age- and sex-adjusted exploratory analysis
+
+The sample sheet contains age and sex for all validated samples. The project therefore supports a more informative exploratory model:
+
+```bash
+./run.sh -d adjusted
+```
+
+This fits one ordinary least-squares model per methylation feature in a vectorized calculation:
+
+`M-value ~ PD status + age + sex`
+
+The reported PD coefficient estimates the PD-Control difference conditional on age and sex. Benjamini-Hochberg FDR correction is applied across tested features. Features with any missing/non-finite value across the 28 samples are excluded from this complete-case model and counted in the summary. This small-sample observational analysis remains exploratory; it does not control batch effects, prove causality, or establish diagnostic value. It is not a paired test.
+
 ### Independent exploratory analysis
 
 If valid paired information is not confirmed, an exploratory unpaired comparison can be requested explicitly:
@@ -227,7 +241,7 @@ The final submission may additionally require a ZIP archive containing the appro
 - Actual GEO headers, sample IDs, group labels, and pair information must be confirmed from the downloaded metadata.
 - A paired test is appropriate only when the metadata and study design verify one-to-one pairs.
 - An independent Welch test does not model the matching implied by the study description.
-- The current statistical framework does not account for age, sex, batch, or other confounding variables.
+- Only the adjusted OLS mode accounts for age and sex; batch effects and other confounders are not modeled.
 - Results are exploratory associations and should not be interpreted as causal findings or clinical diagnostic claims.
 
 ## 13. Sources

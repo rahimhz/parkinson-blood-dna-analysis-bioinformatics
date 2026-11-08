@@ -7,6 +7,6 @@ Suggested contents:
 1. Research question and GEO accession/source.
 2. Processed M-values versus raw IDAT scope.
 3. Verified sample metadata, matching, and group counts.
-4. Statistical design rationale and limitations.
-5. Methods, multiple-testing correction, figures, and actual results.
+4. Statistical design rationale: exploratory OLS adjusted for age and sex; no verified pair IDs or batch correction.
+5. Methods, Benjamini–Hochberg FDR, actual tested-feature count, volcano plot, and results.
 6. Reproducibility details and conclusions without causal or diagnostic claims.
