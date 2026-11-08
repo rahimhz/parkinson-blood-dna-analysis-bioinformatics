@@ -81,13 +81,13 @@ class AnalysisTests(unittest.TestCase):
     def test_chunked_numeric_validation_accepts_numeric_matrix(self):
         with tempfile.TemporaryDirectory() as directory:
             path = self.write_csv(directory, 'numeric.csv',
-                'feature,S1,S2\\ncgA,1.2,2.3\\ncgB,3.4,4.5\\n')
+                'feature,S1,S2\ncgA,1.2,2.3\ncgB,3.4,4.5\n')
             validate_numeric_matrix(path, chunksize=1)
 
     def test_chunked_numeric_validation_rejects_non_numeric_matrix(self):
         with tempfile.TemporaryDirectory() as directory:
             path = self.write_csv(directory, 'text.csv',
-                'feature,S1,S2\\ncgA,missing,unknown\\ncgB,none,NA\\n')
+                'feature,S1,S2\ncgA,missing,unknown\ncgB,none,NA\n')
             with self.assertRaisesRegex(ValueError, 'no finite numeric'):
                 validate_numeric_matrix(path, chunksize=1)
 
