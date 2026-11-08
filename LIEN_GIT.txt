@@ -1,2 +1,2 @@
-Repository: https://github.com/rahimhz/parkinson-blood-omics
+Repository: https://github.com/rahimhz/parkinson-blood-dna-analysis-bioinformatics
 Final commit hash: [fill in only after an approved final commit]
